@@ -1,46 +1,58 @@
-import 'package:favorite_places/provider/places_provider.dart';
+import 'package:favorite_places/provider/user_places.dart';
 import 'package:favorite_places/screens/add_place.dart';
+import 'package:favorite_places/widgets/places_list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class PlacesScreen extends ConsumerWidget {
+class PlacesScreen extends ConsumerStatefulWidget {
   const PlacesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final List placeList = ref.watch(placeProvider);
-    // final placeList = [];
+  ConsumerState<PlacesScreen> createState() {
+    return _PlaceScreenState();
+  }
+}
 
-    void _addPlace() {
-      Navigator.of(context).push(MaterialPageRoute(
-        builder: (context) => const AddPlaceScreen(),
-      ));
-    }
+class _PlaceScreenState extends ConsumerState<PlacesScreen> {
+  late Future<void> _placeFuture;
 
-    Widget content = const Center(
-      child: Text('No places added yet.',
-          style: TextStyle(
-            color: Colors.white,
-          )),
-    );
+  @override
+  void initState() {
+    super.initState();
+    _placeFuture = ref.read(userPlacesProvider.notifier).loadPlaces();
+  }
 
-    if (placeList.isNotEmpty) {
-      return content = const Center(
-        child: Text('Place added!'),
-      );
-    }
+  @override
+  Widget build(BuildContext context) {
+    final userPlaces = ref.watch(userPlacesProvider);
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
         title: const Text('Your Places'),
         actions: [
           IconButton(
-            onPressed: _addPlace,
+            onPressed: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => const AddPlaceScreen()));
+            },
             icon: const Icon(Icons.add),
           ),
         ],
       ),
-      body: content,
+      body: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: FutureBuilder(
+            future: _placeFuture,
+            builder: (context, snapshot) =>
+                snapshot.connectionState == ConnectionState.waiting
+                    ? const Center(
+                        child: CircularProgressIndicator(),
+                      )
+                    : PlacesList(
+                        places: userPlaces,
+                      ),
+          )),
     );
   }
 }
